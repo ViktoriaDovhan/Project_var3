@@ -53,13 +53,6 @@ procChar proc
     mov isWord, 1           ; Якщо ні, встановлення флагу isWord в 1
     call trnInNum           ; Виклик процедури перетворення в число
     jmp endProc             ; Завершення процедури
-itsWord:
-    mov si, offset keyTemp  ; Завантаження адреси тимчасового ключа у регістр si
-    mov bx, keyTempIndex    ; Завантаження індексу тимчасового ключа у регістр bx
-    add si, bx              ; Додавання індексу до адреси
-    mov al, char            ; Завантаження символу у регістр al
-    mov [si], al            ; Збереження символу у тимчасовому ключі
-    inc keyTempIndex        ; Інкремент індексу тимчасового ключа
 notCR:
     cmp char, 0Ah           ; Перевірка, чи є символ символом нового рядка
     jnz notLF               ; Якщо не так, перевірка на наступний символ
@@ -84,7 +77,13 @@ notSpace:
     mov [si], al            ; Збереження символу в масиві чисел
     inc numberIndex         ; Інкремент індексу числа
     jmp endProc             ; Завершення процедури
-
+itsWord:
+    mov si, offset keyTemp  ; Завантаження адреси тимчасового ключа у регістр si
+    mov bx, keyTempIndex    ; Завантаження індексу тимчасового ключа у регістр bx
+    add si, bx              ; Додавання індексу до адреси
+    mov al, char            ; Завантаження символу у регістр al
+    mov [si], al            ; Збереження символу у тимчасовому ключі
+    inc keyTempIndex        ; Інкремент індексу тимчасового ключа
 
 endProc:
     ret                     ; Повернення з процедури
@@ -110,13 +109,6 @@ trnInNum PROC
         cmp cx, 0               ; Перевірка, чи регістр cx містить 0
         jnz notZer              ; Якщо не так, перейти до наступного кроку
         jmp endOFMul            ; Якщо так, завершити множення на 10
-    
-    endOFMul:
-        pop cx                  ; Відновлення значення регістру cx
-        add bx, ax              ; Додавання ax до bx
-        inc cx                  ; Інкрементування cx
-        cmp cx, numberIndex     ; Порівняння cx з numberIndex
-        jnz calcNum             ; Якщо не рівні, повторити обчислення числа
     notZer:
         mulByTen:
         mov dx, 10              ; Завантаження 10 у регістр dx
@@ -124,6 +116,12 @@ trnInNum PROC
         dec cx                  ; Декрементування cx
         cmp cx, 0               ; Перевірка, чи cx не дорівнює 0
         jnz mulByTen            ; Якщо так, повторити множення на 10
+    endOFMul:
+        pop cx                  ; Відновлення значення регістру cx
+        add bx, ax              ; Додавання ax до bx
+        inc cx                  ; Інкрементування cx
+        cmp cx, numberIndex     ; Порівняння cx з numberIndex
+        jnz calcNum             ; Якщо не рівні, повторити обчислення числа
     afterCalc:
         mov si, offset valuesarray  ; Завантаження адреси масиву значень у регістр si
         mov ax, presIndex          ; Завантаження presIndex у регістр ax
@@ -163,7 +161,21 @@ trnInNum PROC
 
 
 
-      
+        makeChar:
+            mov dx, 0                   ; Очищення регістру dx
+            mov bx, 10                  ; Завантаження значення 10 у регістр bx
+            div bx                      ; Ділення ax на bx
+            lea si, keyTemp             ; Завантаження адреси масиву keyTemp у регістр si
+            add si, cx                  ; Додавання значення cx до si
+            add dx, '0'                 ; Додавання ASCII-коду "0" до значення dx
+            mov [si], dl                ; Збереження значення dl у масиві keyTemp
+            cmp ax, 0                   ; Порівняння ax з 0
+            jnz contSetNumb             ; Якщо ax не дорівнює 0, перейти до мітки contSetNumb
+            mov bx, 16                  ; Завантаження значення 16 у регістр bx
+            mov numberIndex, bx         ; Збереження значення bx у numberIndex
+            sub numberIndex, cx         ; Віднімання значення cx від numberIndex
+            jmp reverse_number          ; Перехід до мітки reverse_number
+
         contSetNumb:
             dec cx                      ; Декрементування cx
             cmp cx, -1                  ; Порівняння cx з -1
@@ -185,21 +197,6 @@ trnInNum PROC
             inc cx                      ; Інкрементування cx
             cmp cx, 16                  ; Порівняння cx з 16
             jnz reverse                 ; Якщо cx не дорівнює 16, повторити зворотне формування
-        makeChar:
-            mov dx, 0                   ; Очищення регістру dx
-            mov bx, 10                  ; Завантаження значення 10 у регістр bx
-            div bx                      ; Ділення ax на bx
-            lea si, keyTemp             ; Завантаження адреси масиву keyTemp у регістр si
-            add si, cx                  ; Додавання значення cx до si
-            add dx, '0'                 ; Додавання ASCII-коду "0" до значення dx
-            mov [si], dl                ; Збереження значення dl у масиві keyTemp
-            cmp ax, 0                   ; Порівняння ax з 0
-            jnz contSetNumb             ; Якщо ax не дорівнює 0, перейти до мітки contSetNumb
-            mov bx, 16                  ; Завантаження значення 16 у регістр bx
-            mov numberIndex, bx         ; Збереження значення bx у numberIndex
-            sub numberIndex, cx         ; Віднімання значення cx від numberIndex
-            jmp reverse_number          ; Перехід до мітки reverse_number
-
 
             ret
         turnInChar endp
@@ -219,7 +216,20 @@ trnInNum PROC
             findKey:
             mov dx, 0                   ; Очищення регістру dx
 
-            
+            checkPresKey:
+            lea si, keysofarray        ; Завантаження адреси масиву ключів у регістр si
+            shl cx, 4                   ; Зміщення значення cx вліво на 4 біти (еквівалент множення на 16)
+            add si, cx                  ; Додавання значення cx до si
+            shr cx, 4                   ; Зміщення значення cx вправо на 4 біти (еквівалент ділення на 16)
+            add si, dx                  ; Додавання значення dx до si
+            mov al, [si]                ; Завантаження байту даних з адреси, на яку вказує si, у регістр al
+            lea di, keyTemp             ; Завантаження адреси тимчасового ключа у регістр di
+            add di, dx                  ; Додавання значення dx до di
+            mov ah, [di]                ; Завантаження байту даних з адреси, на яку вказує di, у регістр ah
+            cmp al, ah                  ; Порівняння значень al та ah
+            jne notEqualChar            ; Якщо вони не рівні, перейти до мітки notEqualChar
+            mov bx, 1                   ; Якщо рівні, встановити bx в 1
+            jmp contComp                ; Перейти до мітки contComp
         notEqualChar:
             mov bx, 0                   ; Встановити bx в 0
             mov dx, 15                  ; Завантаження 15 у регістр dx
@@ -242,20 +252,6 @@ trnInNum PROC
 
             keyPresent:
                 call ifkeypresent          ; Виклик процедури для випадку, коли ключ присутній
-            checkPresKey:
-            lea si, keysofarray        ; Завантаження адреси масиву ключів у регістр si
-            shl cx, 4                   ; Зміщення значення cx вліво на 4 біти (еквівалент множення на 16)
-            add si, cx                  ; Додавання значення cx до si
-            shr cx, 4                   ; Зміщення значення cx вправо на 4 біти (еквівалент ділення на 16)
-            add si, dx                  ; Додавання значення dx до si
-            mov al, [si]                ; Завантаження байту даних з адреси, на яку вказує si, у регістр al
-            lea di, keyTemp             ; Завантаження адреси тимчасового ключа у регістр di
-            add di, dx                  ; Додавання значення dx до di
-            mov ah, [di]                ; Завантаження байту даних з адреси, на яку вказує di, у регістр ah
-            cmp al, ah                  ; Порівняння значень al та ah
-            jne notEqualChar            ; Якщо вони не рівні, перейти до мітки notEqualChar
-            mov bx, 1                   ; Якщо рівні, встановити bx в 1
-            jmp contComp                ; Перейти до мітки contComp
 
             endOfCheck:
                 mov keyTempIndex, 0        ; Очищення індексу тимчасового ключа
@@ -411,6 +407,24 @@ trnInNum PROC
                     pop dx                      ; Вилучення значення dx зі стеку
 
                     mov cx, 0                   ; Очищення регістру cx
+
+                    fillArrayOfPoint:
+                    lea di, quantityarray       ; Завантаження адреси масиву кількостей у регістр di
+                    shl cx, 1                   ; Зміщення значення cx вліво на 1 біт (еквівалент множення на 2)
+                    add di, cx                  ; Додавання значення cx до di
+                    shr cx, 1                   ; Зміщення значення cx вправо на 1 біт (еквівалент ділення на 2)
+                    mov [di], cx                ; Збереження значення cx у масиві кількостей
+                    inc cx                      ; Інкрементування cx
+                    cmp cx, newIndex            ; Порівняння cx з newIndex
+                    jnz fillArrayOfPoint        ; Якщо не рівні, повторити заповнення масиву вказівників
+
+                    mov cx, word ptr newIndex  ; Завантаження newIndex у регістр cx
+                    dec cx                      ; Декрементування cx
+
+                    outerLoop:
+                    push cx                     ; Збереження значення cx у стеку
+                    lea si, quantityarray       ; Завантаження адреси масиву кількостей у регістр si
+
                     innerLoop:
                     mov ax, [si]                ; Завантаження слова з адреси, на яку вказує si, у регістр ax
                     push ax                     ; Збереження значення ax у стеку
@@ -431,25 +445,6 @@ trnInNum PROC
                     xchg bx, ax                 ; Обмін значеннями bx та ax
                     mov [si], ax                ; Збереження значення ax у масиві кількостей
                     mov [si + 2], bx            ; Збереження значення bx у наступному слові масиву кількостей
-
-                    fillArrayOfPoint:
-                    lea di, quantityarray       ; Завантаження адреси масиву кількостей у регістр di
-                    shl cx, 1                   ; Зміщення значення cx вліво на 1 біт (еквівалент множення на 2)
-                    add di, cx                  ; Додавання значення cx до di
-                    shr cx, 1                   ; Зміщення значення cx вправо на 1 біт (еквівалент ділення на 2)
-                    mov [di], cx                ; Збереження значення cx у масиві кількостей
-                    inc cx                      ; Інкрементування cx
-                    cmp cx, newIndex            ; Порівняння cx з newIndex
-                    jnz fillArrayOfPoint        ; Якщо не рівні, повторити заповнення масиву вказівників
-
-                    mov cx, word ptr newIndex  ; Завантаження newIndex у регістр cx
-                    dec cx                      ; Декрементування cx
-
-                    outerLoop:
-                    push cx                     ; Збереження значення cx у стеку
-                    lea si, quantityarray       ; Завантаження адреси масиву кількостей у регістр si
-
-                    
 
                     nextStep:
                     add si, 2                   ; Додавання 2 до si
