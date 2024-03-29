@@ -19,6 +19,7 @@ main proc
     mov ax, @data           ; Завантаження адреси секції даних у регістр ax
     mov ds, ax              ; Переміщення значення регістра ax в регістр ds
 
+; зчитує з файлу
 read_next:                 ; Мітка для циклу зчитування
     mov ah, 3Fh             ; Служба DOS для відкриття файлу
     mov bx, 0               ; Дескриптор файлу
@@ -77,7 +78,7 @@ notSpace:
     mov [si], al            ; Збереження символу в масиві чисел
     inc numberIndex         ; Інкремент індексу числа
     jmp endProc             ; Завершення процедури
-itsWord:
+itsWord:               ;якщо слово то ключ інакше значення
     mov si, offset keyTemp  ; Завантаження адреси тимчасового ключа у регістр si
     mov bx, keyTempIndex    ; Завантаження індексу тимчасового ключа у регістр bx
     add si, bx              ; Додавання індексу до адреси
@@ -142,67 +143,7 @@ trnInNum PROC
 
         ret
     trnInNum endp
-
-    ; Процедура для перетворення в символ
-    turnInChar proc
-        pop dx                      ; Вилучення значення dx зі стеку
-        pop bx                      ; Вилучення значення bx зі стеку
-        shl bx, 1                   ; Зміщення значення bx вліво на 1 біт (еквівалент множення на 2)
-        mov ax, [valuesarray + bx]  ; Завантаження слова з адреси, обчисленої за допомогою bx, у регістр ax
-        cmp ax, 10000               ; Порівняння ax з 10000
-        jc positive                 ; Якщо ax менше за 10000, перейти до мітки positive
-        neg ax                      ; Виконати додатковий код для від'ємного числа
-
-        positive:
-        shr bx, 1                   ; Зміщення значення bx вправо на 1 біт (еквівалент ділення на 2)
-        push bx                     ; Збереження значення bx у стеку
-        push dx                     ; Збереження значення dx у стеку
-        mov cx, 15                  ; Завантаження значення 15 у регістр cx
-
-
-
-        makeChar:
-            mov dx, 0                   ; Очищення регістру dx
-            mov bx, 10                  ; Завантаження значення 10 у регістр bx
-            div bx                      ; Ділення ax на bx
-            lea si, keyTemp             ; Завантаження адреси масиву keyTemp у регістр si
-            add si, cx                  ; Додавання значення cx до si
-            add dx, '0'                 ; Додавання ASCII-коду "0" до значення dx
-            mov [si], dl                ; Збереження значення dl у масиві keyTemp
-            cmp ax, 0                   ; Порівняння ax з 0
-            jnz contSetNumb             ; Якщо ax не дорівнює 0, перейти до мітки contSetNumb
-            mov bx, 16                  ; Завантаження значення 16 у регістр bx
-            mov numberIndex, bx         ; Збереження значення bx у numberIndex
-            sub numberIndex, cx         ; Віднімання значення cx від numberIndex
-            jmp reverse_number          ; Перехід до мітки reverse_number
-
-        contSetNumb:
-            dec cx                      ; Декрементування cx
-            cmp cx, -1                  ; Порівняння cx з -1
-            jne makeChar                ; Якщо cx не дорівнює -1, повторити формування символів
-
-        reverse_number:
-            mov cx, 16                  ; Завантаження значення 16 у регістр cx
-            sub cx, numberIndex         ; Віднімання numberIndex від cx
-            mov dx, 0                   ; Очищення регістру dx
-
-        reverse:
-            lea si, keyTemp             ; Завантаження адреси масиву keyTemp у регістр si
-            add si, cx                  ; Додавання значення cx до si
-            lea di, number              ; Завантаження адреси масиву number у регістр di
-            add di, dx                  ; Додавання значення dx до di
-            mov al, [si]                ; Завантаження байту даних з адреси, на яку вказує si, у регістр al
-            mov [di], al                ; Збереження байту даних у масиві number
-            inc dx                      ; Інкрементування dx
-            inc cx                      ; Інкрементування cx
-            cmp cx, 16                  ; Порівняння cx з 16
-            jnz reverse                 ; Якщо cx не дорівнює 16, повторити зворотне формування
-
-            ret
-        turnInChar endp
-
-
-
+    
         checkKey proc
             mov ax, 0                   ; Очищення регістру ax
             mov bx, 0                   ; Очищення регістру bx
@@ -364,21 +305,7 @@ trnInNum PROC
                     jnz makeString              ; Якщо не рівні, повторити формування рядка
 
                     ret
-                writeArrays endp
-                ; Процедура для додавання мінуса, якщо значення від'ємне
-                addMinus proc
-                    mov bx, cx                  ; Завантаження значення cx у регістр bx
-                    shl bx, 1                   ; Зміщення значення bx вліво на 1 біт (еквівалент множення на 2)
-                    mov ax, [valuesarray + bx]  ; Завантаження слова з адреси, обчисленої за допомогою bx, у регістр ax
-                    cmp ax, 10000               ; Порівняння ax з 10000
-                    jc positiveVal              ; Якщо ax менше за 10000, перейти до мітки positiveVal
-                    mov ah, 02h                 ; Завантаження 02h у регістр ah (для виводу символу)
-                    mov dl, '-'                 ; Завантаження ASCII-коду мінуса у регістр dl
-                    int 21h                     ; Виклик системної служби для виводу символу
-
-                    positiveVal:
-                    ret
-                addMinus endp
+                writeArrays endp        
                 ; Процедура для обчислення середнього значення
                 calcAvr proc
                     mov cx, 0                   ; Очищення регістру cx
